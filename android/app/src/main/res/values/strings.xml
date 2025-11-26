@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Reconnaissance Faciale</string>
+    <string name="capture_photo">Capturer une photo</string>
+    <string name="flip_camera">Changer de caméra</string>
+    <string name="retake_photo">Reprendre une photo</string>
+    <string name="captured_image">Image capturée</string>
+    <string name="analyzing">Analyse en cours…</string>
+    <string name="results_title">Résultats de Reconnaissance</string>
+</resources>
