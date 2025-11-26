@@ -150,6 +150,7 @@ L'application nécessite :
 Ce projet est fourni à des fins éducatives.
 
 ## 👨‍💻 Auteur
+David Mwangaza & NGOY Manoah
 
 Projet de reconnaissance faciale Android avec TensorFlow Lite
 
