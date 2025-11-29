@@ -4,30 +4,30 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.gson.Gson
-import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.support.common.FileUtil
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import java.nio.FloatBuffer
 import kotlin.math.exp
-import kotlin.math.sqrt
 
 /**
- * Classe pour gérer l'inférence du modèle TensorFlow Lite
+ * Classe pour gérer l'inférence du modèle ONNX
  * Reconnaissance faciale hors ligne
  */
 class FaceRecognitionModel(private val context: Context) {
     
-    private var interpreter: Interpreter? = null
+    private var ortEnv: OrtEnvironment? = null
+    private var ortSession: OrtSession? = null
     private var embeddingExtractor: EmbeddingExtractor? = null
     private var labels: List<String> = emptyList()
-    private var inputShape: IntArray = intArrayOf(1, 512)
-    private var outputShape: IntArray = intArrayOf(1, 2)
+    private var inputShape: LongArray = longArrayOf(1, 512)
+    private var outputShape: LongArray = longArrayOf(1, 2)
     
     companion object {
         private const val TAG = "FaceRecognitionModel"
-        private const val MODEL_FILE = "face_recognition_model.tflite"
+        private const val MODEL_FILE = "face_recognition_model.onnx"
         private const val METADATA_FILE = "face_recognition_metadata.json"
         private const val BATCH_SIZE = 1
         private const val EMBEDDING_SIZE = 512
@@ -72,42 +72,42 @@ class FaceRecognitionModel(private val context: Context) {
     }
     
     /**
-     * Charge le modèle TensorFlow Lite
+     * Charge le modèle ONNX
      */
     private fun loadModel() {
         try {
-            Log.d(TAG, "Chargement du modèle: $MODEL_FILE")
+            Log.d(TAG, "Chargement du modèle ONNX: $MODEL_FILE")
             
             // Vérifier que le fichier existe
             val assetFiles = context.assets.list("") ?: emptyArray()
             Log.d(TAG, "Fichiers assets disponibles: ${assetFiles.joinToString()}")
             
-            val options = Interpreter.Options().apply {
-                setNumThreads(4)
-                setUseNNAPI(true) // Utiliser Neural Networks API si disponible
+            if (!assetFiles.contains(MODEL_FILE)) {
+                throw IllegalStateException("Fichier $MODEL_FILE introuvable dans assets")
             }
             
-            val modelBuffer = FileUtil.loadMappedFile(context, MODEL_FILE)
-            Log.d(TAG, "Buffer modèle chargé: ${modelBuffer.capacity()} bytes")
+            // Charger le modèle ONNX
+            val modelBytes = context.assets.open(MODEL_FILE).use { it.readBytes() }
+            Log.d(TAG, "Modèle ONNX chargé: ${modelBytes.size} bytes")
             
-            interpreter = Interpreter(modelBuffer, options)
-            Log.d(TAG, "✓ Interpreter créé")
+            // Créer l'environnement et la session ONNX Runtime
+            ortEnv = OrtEnvironment.getEnvironment()
+            ortSession = ortEnv!!.createSession(modelBytes)
             
-            // Récupérer les dimensions du modèle
-            val inputTensor = interpreter?.getInputTensor(0)
-            val outputTensor = interpreter?.getOutputTensor(0)
+            Log.d(TAG, "✓ Session ONNX créée")
             
-            inputShape = inputTensor?.shape() ?: inputShape
-            outputShape = outputTensor?.shape() ?: outputShape
+            // Récupérer les informations du modèle
+            val inputInfo = ortSession!!.inputInfo
+            val outputInfo = ortSession!!.outputInfo
             
-            Log.d(TAG, "✓ Modèle chargé avec succès")
-            Log.d(TAG, "  Input shape: ${inputShape.contentToString()}")
-            Log.d(TAG, "  Output shape: ${outputShape.contentToString()}")
+            Log.d(TAG, "✓ Modèle ONNX chargé avec succès")
+            Log.d(TAG, "  Input names: ${inputInfo.keys}")
+            Log.d(TAG, "  Output names: ${outputInfo.keys}")
             
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur lors du chargement du modèle: ${e.message}", e)
+            Log.e(TAG, "Erreur lors du chargement du modèle ONNX: ${e.message}", e)
             e.printStackTrace()
-            throw e // Propager l'erreur pour qu'elle soit visible
+            throw e
         }
     }
     
@@ -162,8 +162,8 @@ class FaceRecognitionModel(private val context: Context) {
      * Effectue la reconnaissance faciale à partir d'une image
      */
     fun recognize(faceBitmap: Bitmap): RecognitionResult? {
-        if (interpreter == null) {
-            Log.e(TAG, "Modèle non chargé")
+        if (ortSession == null || ortEnv == null) {
+            Log.e(TAG, "Modèle ONNX non chargé")
             return null
         }
         
@@ -175,25 +175,23 @@ class FaceRecognitionModel(private val context: Context) {
                 return null
             }
             
-            // Créer le buffer d'entrée
-            val inputBuffer = ByteBuffer.allocateDirect(BATCH_SIZE * EMBEDDING_SIZE * 4)
-            inputBuffer.order(ByteOrder.nativeOrder())
-            for (value in embedding) {
-                inputBuffer.putFloat(value)
-            }
-            
-            // Préparer le buffer de sortie
-            val numClasses = outputShape[1]
-            val outputBuffer = Array(BATCH_SIZE) { FloatArray(numClasses) }
+            // Créer le tenseur d'entrée ONNX (shape: [1, 512])
+            val inputName = ortSession!!.inputNames.first()
+            val inputTensor = OnnxTensor.createTensor(
+                ortEnv!!,
+                FloatBuffer.wrap(embedding),
+                longArrayOf(1, EMBEDDING_SIZE.toLong())
+            )
             
             // Exécuter l'inférence
-            interpreter?.run(inputBuffer, outputBuffer)
+            val results = ortSession!!.run(mapOf(inputName to inputTensor))
             
-            // Analyser les résultats
-            val probabilities = outputBuffer[0]
+            // Récupérer les résultats
+            val outputTensor = results.first().value as OnnxTensor
+            val outputArray = outputTensor.floatBuffer.array()
             
             // Appliquer softmax si nécessaire
-            val softmaxProbs = softmax(probabilities)
+            val softmaxProbs = softmax(outputArray)
             
             // Trouver la classe avec la plus haute probabilité
             val maxIndex = softmaxProbs.indices.maxByOrNull { softmaxProbs[it] } ?: 0
@@ -205,7 +203,11 @@ class FaceRecognitionModel(private val context: Context) {
                 "Inconnu"
             }
             
-            Log.d(TAG, "Reconnaissance: $name (confiance: ${confidence * 100}%)")
+            Log.d(TAG, "Reconnaissance ONNX: $name (confiance: ${confidence * 100}%)")
+            
+            // Libérer les ressources
+            inputTensor.close()
+            results.close()
             
             return RecognitionResult(
                 name = name,
@@ -233,12 +235,13 @@ class FaceRecognitionModel(private val context: Context) {
      * Libère les ressources
      */
     fun close() {
-        interpreter?.close()
-        interpreter = null
+        ortSession?.close()
+        ortSession = null
+        ortEnv = null
         
         embeddingExtractor?.close()
         embeddingExtractor = null
         
-        Log.d(TAG, "✓ Modèle et extracteur fermés")
+        Log.d(TAG, "✓ Modèle ONNX et extracteur fermés")
     }
 }

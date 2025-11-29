@@ -57,6 +57,9 @@ dependencies {
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
     implementation 'org.tensorflow:tensorflow-lite-gpu:2.16.1'
     
+    // ONNX Runtime pour Android (modèle de classification)
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.0'
+    
     // ML Kit pour détection de visages
     implementation 'com.google.mlkit:face-detection:16.1.6'
     
