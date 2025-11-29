@@ -7,5 +7,6 @@
   "input_shape": [
     512
   ],
-  "model_type": "EmbeddingClassifier"
+  "model_type": "EmbeddingClassifier",
+  "format": "onnx"
 }
