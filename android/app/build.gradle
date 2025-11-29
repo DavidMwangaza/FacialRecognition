@@ -34,8 +34,10 @@ android {
         viewBinding true
         mlModelBinding true
     }
+    // Suppression de la désactivation de compression TFLite (modèle passé à ONNX)
+    // Optionnel: éviter compression ONNX si souhaité
     aaptOptions {
-        noCompress "tflite"
+        noCompress "onnx"
     }
 }
 
@@ -52,12 +54,7 @@ dependencies {
     implementation "androidx.camera:camera-lifecycle:${camerax_version}"
     implementation "androidx.camera:camera-view:${camerax_version}"
     
-    // TensorFlow Lite pour reconnaissance faciale locale (version mise à jour pour compatibilité)
-    implementation 'org.tensorflow:tensorflow-lite:2.16.1'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.16.1'
-    
-    // ONNX Runtime pour Android (modèle de classification)
+    // ONNX Runtime pour Android (classification + embeddings désormais)
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.0'
     
     // ML Kit pour détection de visages

@@ -3,13 +3,12 @@ package com.example.facerecognition.ml
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import org.tensorflow.lite.Interpreter
-// GPU delegate import retiré pour compatibilité
-import java.io.FileInputStream
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
+import java.nio.FloatBuffer
 
 /**
  * Extracteur d'embeddings faciaux utilisant MobileFaceNet
@@ -17,12 +16,13 @@ import java.nio.channels.FileChannel
  */
 class EmbeddingExtractor(private val context: Context) {
 
-    private var interpreter: Interpreter? = null
-    // Supprimé: délégation GPU pour éviter conflits de dépendances
+    private var ortEnv: OrtEnvironment? = null
+    private var ortSession: OrtSession? = null
     
     companion object {
         private const val TAG = "EmbeddingExtractor"
-        private const val MODEL_FILE = "mobilefacenet.tflite"
+        // Passage à ONNX: fournir un fichier 'mobilefacenet.onnx' dans assets
+        private const val MODEL_FILE = "mobilefacenet.onnx"
         
         // Paramètres d'entrée du modèle
         private const val INPUT_SIZE = 112
@@ -35,11 +35,11 @@ class EmbeddingExtractor(private val context: Context) {
     }
 
     /**
-     * Initialise le modèle TFLite
+     * Initialise le modèle ONNX (MobileFaceNet embeddings)
      */
     fun initialize(): Boolean {
         return try {
-            Log.d(TAG, "[EmbeddingExtractor] Début initialisation...")
+            Log.d(TAG, "[EmbeddingExtractor] Début initialisation ONNX...")
             Log.d(TAG, "[EmbeddingExtractor] Chargement de $MODEL_FILE...")
             
             // Vérifier que le fichier existe
@@ -48,57 +48,33 @@ class EmbeddingExtractor(private val context: Context) {
             
             if (assetList?.contains(MODEL_FILE) != true) {
                 Log.e(TAG, "[EmbeddingExtractor] ✗ Fichier $MODEL_FILE introuvable dans assets")
-                Log.e(TAG, "[EmbeddingExtractor] Fichiers .tflite présents: ${assetList?.filter { it.endsWith(".tflite") }?.joinToString()}")
+                Log.e(TAG, "[EmbeddingExtractor] Fichiers .onnx présents: ${assetList?.filter { it.endsWith(".onnx") }?.joinToString()}")
                 return false
             }
             
             Log.d(TAG, "[EmbeddingExtractor] ✓ Fichier $MODEL_FILE trouvé")
-            
-            // Charger le modèle
-            Log.d(TAG, "[EmbeddingExtractor] Chargement du fichier modèle...")
-            val model = loadModelFile()
-            Log.d(TAG, "[EmbeddingExtractor] ✓ Fichier modèle chargé: ${model.capacity()} bytes")
-            
-            // Configurer les options TFLite
-            Log.d(TAG, "[EmbeddingExtractor] Configuration options TFLite...")
-            val options = Interpreter.Options().apply {
-                // Utiliser plusieurs threads CPU et NNAPI pour accélération
-                setNumThreads(4)
-                setUseNNAPI(true)
-            }
-            Log.d(TAG, "[EmbeddingExtractor] ✓ Options configurées")
-            
-            // Créer l'interpréteur
-            Log.d(TAG, "[EmbeddingExtractor] Création Interpreter...")
-            interpreter = Interpreter(model, options)
-            Log.d(TAG, "[EmbeddingExtractor] ✓ Interpreter créé")
-            
-            // Vérifier les dimensions d'entrée/sortie
-            val inputShape = interpreter!!.getInputTensor(0).shape()
-            val outputShape = interpreter!!.getOutputTensor(0).shape()
-            
-            Log.d(TAG, "[EmbeddingExtractor] ✓✓✓ Modèle chargé avec succès ✓✓✓")
-            Log.d(TAG, "[EmbeddingExtractor]   Input shape: ${inputShape.contentToString()}")
-            Log.d(TAG, "[EmbeddingExtractor]   Output shape: ${outputShape.contentToString()}")
+            // Charger le modèle ONNX en mémoire
+            val modelBytes = context.assets.open(MODEL_FILE).use { it.readBytes() }
+            Log.d(TAG, "[EmbeddingExtractor] Taille modèle: ${modelBytes.size} bytes")
+
+            // Créer environnement & session
+            ortEnv = OrtEnvironment.getEnvironment()
+            ortSession = ortEnv!!.createSession(modelBytes)
+
+            // Inspecter entrées/sorties
+            val inputNames = ortSession!!.inputNames
+            val outputNames = ortSession!!.outputNames
+            Log.d(TAG, "[EmbeddingExtractor] Entrées: $inputNames")
+            Log.d(TAG, "[EmbeddingExtractor] Sorties: $outputNames")
+
+            Log.d(TAG, "[EmbeddingExtractor] ✓✓✓ Session ONNX prête ✓✓✓")
             
             true
         } catch (e: Exception) {
-            Log.e(TAG, "[EmbeddingExtractor] ✗✗✗ Erreur lors du chargement: ${e.message}", e)
+            Log.e(TAG, "[EmbeddingExtractor] ✗✗✗ Erreur init ONNX: ${e.message}", e)
             e.printStackTrace()
             false
         }
-    }
-
-    /**
-     * Charge le fichier du modèle depuis les assets
-     */
-    private fun loadModelFile(): MappedByteBuffer {
-        val fileDescriptor = context.assets.openFd(MODEL_FILE)
-        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
-        val fileChannel = inputStream.channel
-        val startOffset = fileDescriptor.startOffset
-        val declaredLength = fileDescriptor.declaredLength
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 
     /**
@@ -108,72 +84,63 @@ class EmbeddingExtractor(private val context: Context) {
      * @return FloatArray de 512 éléments (embedding normalisé L2)
      */
     fun extract(faceBitmap: Bitmap): FloatArray? {
-        if (interpreter == null) {
-            Log.e(TAG, "Modèle non initialisé")
+        if (ortSession == null || ortEnv == null) {
+            Log.e(TAG, "Session ONNX non initialisée")
             return null
         }
-
         return try {
-            // 1. Prétraiter l'image
-            val inputBuffer = preprocessImage(faceBitmap)
-            
-            // 2. Préparer le buffer de sortie
-            val outputBuffer = Array(1) { FloatArray(EMBEDDING_SIZE) }
-            
-            // 3. Exécuter l'inférence
-            interpreter!!.run(inputBuffer, outputBuffer)
-            
-            // 4. Extraire et normaliser l'embedding
-            val embedding = outputBuffer[0]
+            // Prétraiter l'image -> FloatArray [112*112*3]
+            val inputFloats = preprocessToFloatArray(faceBitmap)
+
+            val inputName = ortSession!!.inputNames.first()
+            val inputTensor = OnnxTensor.createTensor(
+                ortEnv!!,
+                FloatBuffer.wrap(inputFloats),
+                longArrayOf(1, INPUT_SIZE.toLong(), INPUT_SIZE.toLong(), PIXEL_SIZE.toLong())
+            )
+
+            val results = ortSession!!.run(mapOf(inputName to inputTensor))
+            val outputTensor = results.values.first().value as OnnxTensor
+            val rawEmbedding = outputTensor.floatBuffer.array()
+
+            // Copie sûre (array peut être plus grand que EMBEDDING_SIZE)
+            val embedding = if (rawEmbedding.size == EMBEDDING_SIZE) rawEmbedding
+            else rawEmbedding.copyOf(EMBEDDING_SIZE)
+
             normalizeL2(embedding)
-            
-            Log.d(TAG, "Embedding extrait: ${embedding.size}D, norm=${calculateNorm(embedding)}")
-            
+            Log.d(TAG, "Embedding ONNX extrait: ${embedding.size}D norm=${calculateNorm(embedding)}")
+
+            // Libérer ressources temporaires
+            inputTensor.close()
+            results.close()
+            outputTensor.close()
+
             embedding
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur lors de l'extraction de l'embedding", e)
+            Log.e(TAG, "Erreur extraction embedding ONNX: ${e.message}", e)
             null
         }
     }
 
-    /**
-     * Prétraite l'image pour l'entrée du modèle
-     * - Redimensionne à 112x112
-     * - Normalise les pixels: (pixel - 127.5) / 127.5
-     * - Format: float32, ordre NCHW ou NHWC selon le modèle
-     */
-    private fun preprocessImage(bitmap: Bitmap): ByteBuffer {
-        // Redimensionner si nécessaire
-        val scaledBitmap = if (bitmap.width != INPUT_SIZE || bitmap.height != INPUT_SIZE) {
+    /** Prétraitement vers FloatArray NHWC */
+    private fun preprocessToFloatArray(bitmap: Bitmap): FloatArray {
+        val scaled = if (bitmap.width != INPUT_SIZE || bitmap.height != INPUT_SIZE) {
             Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
-        } else {
-            bitmap
-        }
+        } else bitmap
 
-        // Créer le buffer d'entrée
-        val inputBuffer = ByteBuffer.allocateDirect(
-            4 * INPUT_SIZE * INPUT_SIZE * PIXEL_SIZE
-        ).apply {
-            order(ByteOrder.nativeOrder())
-        }
-
-        // Extraire les pixels et normaliser
         val pixels = IntArray(INPUT_SIZE * INPUT_SIZE)
-        scaledBitmap.getPixels(pixels, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
-
-        for (pixel in pixels) {
-            // Extraire RGB
-            val r = ((pixel shr 16) and 0xFF)
-            val g = ((pixel shr 8) and 0xFF)
-            val b = (pixel and 0xFF)
-
-            // Normaliser: (pixel - mean) / std
-            inputBuffer.putFloat((r - IMAGE_MEAN) / IMAGE_STD)
-            inputBuffer.putFloat((g - IMAGE_MEAN) / IMAGE_STD)
-            inputBuffer.putFloat((b - IMAGE_MEAN) / IMAGE_STD)
+        scaled.getPixels(pixels, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
+        val floats = FloatArray(INPUT_SIZE * INPUT_SIZE * PIXEL_SIZE)
+        var idx = 0
+        for (p in pixels) {
+            val r = (p shr 16 and 0xFF)
+            val g = (p shr 8 and 0xFF)
+            val b = (p and 0xFF)
+            floats[idx++] = (r - IMAGE_MEAN) / IMAGE_STD
+            floats[idx++] = (g - IMAGE_MEAN) / IMAGE_STD
+            floats[idx++] = (b - IMAGE_MEAN) / IMAGE_STD
         }
-
-        return inputBuffer
+        return floats
     }
 
     /**
@@ -204,11 +171,11 @@ class EmbeddingExtractor(private val context: Context) {
      * Libère les ressources
      */
     fun close() {
-        interpreter?.close()
-        interpreter = null
-        
-        // Pas de délégation GPU
-        
-        Log.d(TAG, "Ressources libérées")
+        try {
+            ortSession?.close()
+        } catch (_: Exception) {}
+        ortSession = null
+        ortEnv = null
+        Log.d(TAG, "Ressources ONNX libérées")
     }
 }
