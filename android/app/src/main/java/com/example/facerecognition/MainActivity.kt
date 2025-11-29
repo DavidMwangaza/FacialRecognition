@@ -278,6 +278,7 @@ class MainActivity : AppCompatActivity() {
         buffer.get(bytes)
         
         var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        Log.d(TAG, "Bitmap décodé: ${bitmap?.width}x${bitmap?.height}, rotation: ${image.imageInfo.rotationDegrees}°")
         
         // Corriger la rotation
         if (bitmap != null && image.imageInfo.rotationDegrees != 0) {
@@ -288,6 +289,7 @@ class MainActivity : AppCompatActivity() {
                 bitmap.width, bitmap.height,
                 matrix, true
             )
+            Log.d(TAG, "Bitmap après rotation: ${bitmap.width}x${bitmap.height}")
         }
         
         return bitmap
@@ -305,9 +307,14 @@ class MainActivity : AppCompatActivity() {
         isProcessing = true
         binding.progressBar.visibility = View.VISIBLE
         binding.loadingText.visibility = View.VISIBLE
+        binding.loadingText.text = "Détection des visages..."
         binding.resultsCard.visibility = View.GONE
         
-        Log.d(TAG, "Début reconnaissance - Image: ${bitmap.width}x${bitmap.height}")
+        Log.d(TAG, "═══════════════════════════════════════")
+        Log.d(TAG, "DÉBUT RECONNAISSANCE")
+        Log.d(TAG, "Image: ${bitmap.width}x${bitmap.height}")
+        Log.d(TAG, "Modèles initialisés: $modelsInitialized")
+        Log.d(TAG, "═══════════════════════════════════════")
         
         lifecycleScope.launch {
             try {

@@ -22,10 +22,10 @@ class FaceDetector(private val context: Context) {
     }
     
     private val options = FaceDetectorOptions.Builder()
-        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
         .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
         .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
-        .setMinFaceSize(0.15f) // Taille minimale du visage (15% de l'image)
+        .setMinFaceSize(0.1f) // Taille minimale du visage (10% de l'image, réduit pour plus de détection)
         .enableTracking()
         .build()
     
@@ -70,14 +70,9 @@ class FaceDetector(private val context: Context) {
         return try {
             val bounds = face.boundingBox
             
-            // Vérifier que le rectangle est valide
-            if (bounds.left < 0 || bounds.top < 0 ||
-                bounds.right > bitmap.width || bounds.bottom > bitmap.height) {
-                Log.w(TAG, "Rectangle de visage hors limites")
-                return null
-            }
+            Log.d(TAG, "Extraction visage - Bounds bruts: $bounds, Image: ${bitmap.width}x${bitmap.height}")
             
-            // Extraire la région du visage avec un padding
+            // Ajuster les limites au lieu de rejeter
             val padding = 20
             val left = maxOf(0, bounds.left - padding)
             val top = maxOf(0, bounds.top - padding)
@@ -87,11 +82,14 @@ class FaceDetector(private val context: Context) {
             val width = right - left
             val height = bottom - top
             
+            Log.d(TAG, "Dimensions finales - left:$left, top:$top, width:$width, height:$height")
+            
             if (width <= 0 || height <= 0) {
-                Log.w(TAG, "Dimensions de visage invalides")
+                Log.e(TAG, "✗ Dimensions de visage invalides: width=$width, height=$height")
                 return null
             }
             
+            Log.d(TAG, "Création bitmap visage...")
             val faceBitmap = Bitmap.createBitmap(
                 bitmap,
                 left,
@@ -99,6 +97,7 @@ class FaceDetector(private val context: Context) {
                 width,
                 height
             )
+            Log.d(TAG, "✓ Bitmap visage créé: ${faceBitmap.width}x${faceBitmap.height}")
             
             DetectedFace(
                 boundingBox = bounds,
