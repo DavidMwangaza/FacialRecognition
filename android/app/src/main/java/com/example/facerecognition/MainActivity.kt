@@ -58,31 +58,32 @@ class MainActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "🚀 onCreate() démarré")
+        Log.d(TAG, "onCreate démarré")
         
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        Log.d(TAG, "✓ View binding créé")
+        Log.d(TAG, "View binding créé")
         
         cameraExecutor = Executors.newSingleThreadExecutor()
         
         // Initialiser les modèles ML
-        Log.d(TAG, "⏳ Appel de initializeModels()...")
+        Log.d(TAG, "Appel de initializeModels()...")
         initializeModels()
-        Log.d(TAG, "✓ initializeModels() terminé")
+        Log.d(TAG, "initializeModels() terminé")
         
+        setupAppBar()
         setupUI()
         checkPermissions()
-        Log.d(TAG, "✓ onCreate() terminé")
+        Log.d(TAG, "onCreate terminé")
     }
     
     private fun initializeModels() {
         try {
-            Log.d(TAG, "🔧 Initialisation des modèles ML...")
+            Log.d(TAG, "Initialisation des modèles ML...")
             faceRecognitionModel = FaceRecognitionModel(this)
-            Log.d(TAG, "✓ FaceRecognitionModel créé")
+            Log.d(TAG, "FaceRecognitionModel créé")
             faceDetector = FaceDetector(this)
-            Log.d(TAG, "✓ FaceDetector créé")
+            Log.d(TAG, "FaceDetector créé")
             modelsInitialized = true
             
             // Activer le bouton de capture
@@ -90,13 +91,13 @@ class MainActivity : AppCompatActivity() {
                 binding.btnCapture.isEnabled = true
                 binding.btnCapture.isClickable = true
                 binding.btnCapture.alpha = 1.0f
-                Log.d(TAG, "✓ Bouton capture activé: enabled=${binding.btnCapture.isEnabled}, clickable=${binding.btnCapture.isClickable}")
+                Log.d(TAG, "Bouton capture activé: enabled=${binding.btnCapture.isEnabled}, clickable=${binding.btnCapture.isClickable}")
             }
             
-            showMessage("✓ Modèles chargés")
-            Log.d(TAG, "✓ Modèles ML initialisés avec succès")
+                showMessage("Modèles chargés")
+                Log.d(TAG, "Modèles ML initialisés avec succès")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erreur lors de l'initialisation des modèles: ${e.message}", e)
+                Log.e(TAG, "Erreur lors de l'initialisation des modèles: ${e.message}", e)
             e.printStackTrace()
             modelsInitialized = false
             faceRecognitionModel = null
@@ -108,40 +109,60 @@ class MainActivity : AppCompatActivity() {
                 binding.btnCapture.alpha = 0.5f
             }
             
-            showMessage("⚠ Erreur: ${e.message}")
+            showMessage("Erreur: ${e.message}")
+        }
+    }
+
+    private fun setupAppBar() {
+        setSupportActionBar(binding.topAppBar)
+        binding.topAppBar.setNavigationOnClickListener {
+            flipCamera()
+        }
+        binding.topAppBar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_settings -> {
+                    showMessage("Paramètres")
+                    true
+                }
+                R.id.action_about -> {
+                    showMessage("À propos")
+                    true
+                }
+                else -> false
+            }
         }
     }
     
     private fun setupUI() {
-        Log.d(TAG, "🎨 setupUI() - Configuration des boutons")
+        Log.d(TAG, "setupUI - Configuration des boutons")
         
         // S'assurer que le bouton est cliquable
         binding.btnCapture.isClickable = true
         binding.btnCapture.isFocusable = true
         
         binding.btnCapture.setOnClickListener {
-            Log.d(TAG, "🔘 Bouton Capture cliqué! modelsInitialized=$modelsInitialized, isEnabled=${binding.btnCapture.isEnabled}")
+            Log.d(TAG, "Bouton Capture cliqué! modelsInitialized=$modelsInitialized, isEnabled=${binding.btnCapture.isEnabled}")
             showMessage("Bouton cliqué!")
             if (modelsInitialized) {
-                Log.d(TAG, "✓ Appel de capturePhoto()")
+                Log.d(TAG, "Appel de capturePhoto()")
                 capturePhoto()
             } else {
-                Log.w(TAG, "⚠ Modèles non initialisés")
-                showMessage("⚠ Modèles non chargés")
+                Log.w(TAG, "Modèles non initialisés")
+                showMessage("Modèles non chargés")
             }
         }
         
         binding.btnFlip.setOnClickListener {
-            Log.d(TAG, "🔄 Bouton Flip cliqué")
+            Log.d(TAG, "Bouton Flip cliqué")
             flipCamera()
         }
         
         binding.btnRetake.setOnClickListener {
-            Log.d(TAG, "🔁 Bouton Retake cliqué")
+            Log.d(TAG, "Bouton Retake cliqué")
             resetCapture()
         }
         
-        Log.d(TAG, "✓ Boutons configurés")
+        Log.d(TAG, "Boutons configurés")
     }
     
     private fun checkPermissions() {
@@ -189,20 +210,20 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun capturePhoto() {
-        Log.d(TAG, "📸 capturePhoto() appelé")
+        Log.d(TAG, "capturePhoto() appelé")
         if (isProcessing) {
-            Log.w(TAG, "⚠ Déjà en traitement")
+            Log.w(TAG, "Déjà en traitement")
             showMessage("Traitement en cours...")
             return
         }
         
         val imageCapture = imageCapture ?: run {
-            Log.e(TAG, "❌ imageCapture est null!")
-            showMessage("❌ Caméra non prête")
+            Log.e(TAG, "imageCapture est null!")
+            showMessage("Caméra non prête")
             return
         }
         
-        Log.d(TAG, "✓ Prise de photo...")
+        Log.d(TAG, "Prise de photo...")
         
         imageCapture.takePicture(
             ContextCompat.getMainExecutor(this),
@@ -226,7 +247,7 @@ class MainActivity : AppCompatActivity() {
                 
                 override fun onError(exception: ImageCaptureException) {
                     Log.e(TAG, "Erreur capture", exception)
-                    showMessage("❌ Erreur lors de la capture")
+                    showMessage("Erreur lors de la capture")
                 }
             }
         )
@@ -256,9 +277,9 @@ class MainActivity : AppCompatActivity() {
     private fun recognizeFaces(bitmap: Bitmap) {
         // Vérifier que les modèles sont initialisés
         if (!modelsInitialized || faceDetector == null || faceRecognitionModel == null) {
-            binding.resultsText.text = "❌ Erreur: Modèles non chargés. Redémarrez l'application."
+            binding.resultsText.text = "Erreur: Modèles non chargés. Redémarrez l'application."
             binding.resultsCard.visibility = View.VISIBLE
-            showMessage("⚠ Modèles non chargés")
+            showMessage("Modèles non chargés")
             return
         }
         
@@ -267,23 +288,23 @@ class MainActivity : AppCompatActivity() {
         binding.loadingText.visibility = View.VISIBLE
         binding.resultsCard.visibility = View.GONE
         
-        Log.d(TAG, "🚀 Début reconnaissance - Image: ${bitmap.width}x${bitmap.height}")
+        Log.d(TAG, "Début reconnaissance - Image: ${bitmap.width}x${bitmap.height}")
         
         lifecycleScope.launch {
             try {
                 val results = withContext(Dispatchers.Default) {
-                    Log.d(TAG, "🔍 Lancement détection...")
+                    Log.d(TAG, "Lancement détection...")
                     faceDetector!!.detectAndRecognize(bitmap, faceRecognitionModel!!)
                 }
                 
-                Log.d(TAG, "📊 Résultats obtenus: ${results.size} visage(s)")
+                Log.d(TAG, "Résultats obtenus: ${results.size} visage(s)")
                 
                 // Afficher les résultats
                 displayResults(results, bitmap)
                 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Erreur reconnaissance", e)
-                binding.resultsText.text = "❌ Erreur: ${e.message}\n${e.stackTraceToString()}"
+                Log.e(TAG, "Erreur reconnaissance", e)
+                binding.resultsText.text = "Erreur: ${e.message}\n${e.stackTraceToString()}"
                 binding.resultsCard.visibility = View.VISIBLE
             } finally {
                 isProcessing = false
@@ -296,7 +317,7 @@ class MainActivity : AppCompatActivity() {
     private fun displayResults(results: List<FaceDetector.RecognitionResult>, originalBitmap: Bitmap) {
         binding.resultsCard.visibility = View.VISIBLE
         if (results.isEmpty()) {
-            binding.resultsText.text = "⚠ Aucun visage détecté"
+            binding.resultsText.text = "Aucun visage détecté"
             showMessage("Aucun visage trouvé")
             // Do not show the annotated image if no faces are detected.
             binding.capturedImageView.setImageBitmap(originalBitmap)
@@ -309,9 +330,9 @@ class MainActivity : AppCompatActivity() {
         
         // Afficher les résultats textuels
         val resultText = buildString {
-            append("✅ ${results.size} visage(s) détecté(s)\n\n")
+            append("${results.size} visage(s) détecté(s)\n\n")
             results.forEachIndexed { index, result ->
-                append("👤 Visage ${index + 1}:\n")
+                append("Visage ${index + 1}:\n")
                 append("   Nom: ${result.name}\n")
                 append("   Confiance: ${String.format(Locale.US, "%.1f", result.confidence * 100)}%\n\n")
             }
@@ -410,9 +431,30 @@ class MainActivity : AppCompatActivity() {
         try {
             faceRecognitionModel?.close()
             faceDetector?.close()
-            Log.d(TAG, "✓ Ressources ML libérées")
+            Log.d(TAG, "Ressources ML libérées")
         } catch (e: Exception) {
             Log.e(TAG, "Erreur libération ressources", e)
         }
+    }
+
+    // Menus
+    override fun onCreateOptionsMenu(menu: android.view.Menu?): Boolean {
+        menuInflater.inflate(R.menu.top_app_bar_menu, menu)
+        return true
+    }
+    
+    // Animations simples pour moderniser les transitions
+    private fun fadeIn(view: View) {
+        view.apply {
+            alpha = 0f
+            visibility = View.VISIBLE
+            animate().alpha(1f).setDuration(200).start()
+        }
+    }
+    private fun fadeOut(view: View) {
+        view.animate().alpha(0f).setDuration(200).withEndAction {
+            view.visibility = View.GONE
+            view.alpha = 1f
+        }.start()
     }
 }
