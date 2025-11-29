@@ -45,10 +45,10 @@ android/app/release/
 android/app/debug/
 
 # TensorFlow Lite generated files
-*.tflite
+# *.tflite (on garde les modèles essentiels dans assets)
 
-# Assets (gardons les métadonnées mais pas les gros modèles)
-# android/app/src/main/assets/*.tflite
+# Assets - garder les modèles nécessaires à l'app
+!android/app/src/main/assets/*.tflite
 
 # Logs
 *.log
