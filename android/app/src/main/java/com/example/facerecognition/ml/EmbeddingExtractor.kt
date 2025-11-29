@@ -39,42 +39,51 @@ class EmbeddingExtractor(private val context: Context) {
      */
     fun initialize(): Boolean {
         return try {
-            Log.d(TAG, "Chargement de $MODEL_FILE...")
+            Log.d(TAG, "[EmbeddingExtractor] Début initialisation...")
+            Log.d(TAG, "[EmbeddingExtractor] Chargement de $MODEL_FILE...")
             
             // Vérifier que le fichier existe
             val assetList = context.assets.list("")
-            Log.d(TAG, "Assets disponibles: ${assetList?.joinToString() ?: "aucun"}")
+            Log.d(TAG, "[EmbeddingExtractor] Assets disponibles: ${assetList?.joinToString() ?: "aucun"}")
             
             if (assetList?.contains(MODEL_FILE) != true) {
-                Log.e(TAG, "Fichier $MODEL_FILE introuvable dans assets")
+                Log.e(TAG, "[EmbeddingExtractor] ✗ Fichier $MODEL_FILE introuvable dans assets")
+                Log.e(TAG, "[EmbeddingExtractor] Fichiers .tflite présents: ${assetList?.filter { it.endsWith(".tflite") }?.joinToString()}")
                 return false
             }
             
+            Log.d(TAG, "[EmbeddingExtractor] ✓ Fichier $MODEL_FILE trouvé")
+            
             // Charger le modèle
+            Log.d(TAG, "[EmbeddingExtractor] Chargement du fichier modèle...")
             val model = loadModelFile()
-            Log.d(TAG, "Fichier modèle chargé: ${model.capacity()} bytes")
+            Log.d(TAG, "[EmbeddingExtractor] ✓ Fichier modèle chargé: ${model.capacity()} bytes")
             
             // Configurer les options TFLite
+            Log.d(TAG, "[EmbeddingExtractor] Configuration options TFLite...")
             val options = Interpreter.Options().apply {
                 // Utiliser plusieurs threads CPU et NNAPI pour accélération
                 setNumThreads(4)
                 setUseNNAPI(true)
             }
+            Log.d(TAG, "[EmbeddingExtractor] ✓ Options configurées")
             
             // Créer l'interpréteur
+            Log.d(TAG, "[EmbeddingExtractor] Création Interpreter...")
             interpreter = Interpreter(model, options)
+            Log.d(TAG, "[EmbeddingExtractor] ✓ Interpreter créé")
             
             // Vérifier les dimensions d'entrée/sortie
             val inputShape = interpreter!!.getInputTensor(0).shape()
             val outputShape = interpreter!!.getOutputTensor(0).shape()
             
-            Log.d(TAG, "✓ Modèle chargé avec succès")
-            Log.d(TAG, "  Input shape: ${inputShape.contentToString()}")
-            Log.d(TAG, "  Output shape: ${outputShape.contentToString()}")
+            Log.d(TAG, "[EmbeddingExtractor] ✓✓✓ Modèle chargé avec succès ✓✓✓")
+            Log.d(TAG, "[EmbeddingExtractor]   Input shape: ${inputShape.contentToString()}")
+            Log.d(TAG, "[EmbeddingExtractor]   Output shape: ${outputShape.contentToString()}")
             
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur lors du chargement du modèle: ${e.message}", e)
+            Log.e(TAG, "[EmbeddingExtractor] ✗✗✗ Erreur lors du chargement: ${e.message}", e)
             e.printStackTrace()
             false
         }

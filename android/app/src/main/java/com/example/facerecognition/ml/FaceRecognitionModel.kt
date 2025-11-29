@@ -48,19 +48,25 @@ class FaceRecognitionModel(private val context: Context) {
     
     init {
         try {
+            Log.d(TAG, "Début initialisation FaceRecognitionModel...")
             loadModel()
+            Log.d(TAG, "✓ Modèle classifier chargé")
             loadMetadata()
+            Log.d(TAG, "✓ Métadonnées chargées")
             
             // Initialiser l'extracteur d'embeddings réel
+            Log.d(TAG, "Création EmbeddingExtractor...")
             embeddingExtractor = EmbeddingExtractor(context)
+            Log.d(TAG, "Appel initialize() sur EmbeddingExtractor...")
             if (!embeddingExtractor!!.initialize()) {
-                Log.e(TAG, "Echec initialisation EmbeddingExtractor, extracteur indisponible")
+                Log.e(TAG, "✗ Echec initialisation EmbeddingExtractor, extracteur indisponible")
                 embeddingExtractor = null
             } else {
-                Log.d(TAG, "EmbeddingExtractor (MobileFaceNet) initialisé avec succès")
+                Log.d(TAG, "✓ EmbeddingExtractor (MobileFaceNet) initialisé avec succès")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur critique lors de l'initialisation du modèle", e)
+            Log.e(TAG, "✗ Erreur critique lors de l'initialisation du modèle", e)
+            e.printStackTrace()
             throw RuntimeException("Impossible d'initialiser FaceRecognitionModel: ${e.message}", e)
         }
     }
