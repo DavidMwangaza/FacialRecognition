@@ -5,9 +5,4 @@ plugins {
     id 'org.jetbrains.kotlin.android' version '1.9.20' apply false
 }
 
-// Configurer le toolchain Java à 17 pour Gradle et la compilation
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-}
+// La configuration du toolchain Java est gérée au niveau du module app.

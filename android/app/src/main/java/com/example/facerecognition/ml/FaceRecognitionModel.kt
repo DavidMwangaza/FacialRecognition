@@ -47,16 +47,21 @@ class FaceRecognitionModel(private val context: Context) {
     )
     
     init {
-        loadModel()
-        loadMetadata()
-        
-        // Initialiser l'extracteur d'embeddings réel
-        embeddingExtractor = EmbeddingExtractor(context)
-        if (!embeddingExtractor!!.initialize()) {
-            Log.e(TAG, "Echec initialisation EmbeddingExtractor, extracteur indisponible")
-            embeddingExtractor = null
-        } else {
-            Log.d(TAG, "EmbeddingExtractor (MobileFaceNet) initialisé avec succès")
+        try {
+            loadModel()
+            loadMetadata()
+            
+            // Initialiser l'extracteur d'embeddings réel
+            embeddingExtractor = EmbeddingExtractor(context)
+            if (!embeddingExtractor!!.initialize()) {
+                Log.e(TAG, "Echec initialisation EmbeddingExtractor, extracteur indisponible")
+                embeddingExtractor = null
+            } else {
+                Log.d(TAG, "EmbeddingExtractor (MobileFaceNet) initialisé avec succès")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Erreur critique lors de l'initialisation du modèle", e)
+            throw RuntimeException("Impossible d'initialiser FaceRecognitionModel: ${e.message}", e)
         }
     }
     
@@ -94,7 +99,7 @@ class FaceRecognitionModel(private val context: Context) {
             Log.d(TAG, "  Output shape: ${outputShape.contentToString()}")
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erreur lors du chargement du modèle: ${e.message}", e)
+            Log.e(TAG, "Erreur lors du chargement du modèle: ${e.message}", e)
             e.printStackTrace()
             throw e // Propager l'erreur pour qu'elle soit visible
         }
@@ -113,7 +118,7 @@ class FaceRecognitionModel(private val context: Context) {
                 }
             }
             
-            Log.d(TAG, "📄 JSON lu: $jsonString")
+            Log.d(TAG, "JSON lu: $jsonString")
             
             val gson = Gson()
             val metadata = gson.fromJson(jsonString, ModelMetadata::class.java)
@@ -203,7 +208,7 @@ class FaceRecognitionModel(private val context: Context) {
             )
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erreur lors de la reconnaissance: ${e.message}", e)
+            Log.e(TAG, "Erreur lors de la reconnaissance: ${e.message}", e)
             return null
         }
     }

@@ -53,12 +53,12 @@ class FaceDetector(private val context: Context) {
             }
             
             faces.mapNotNull { face ->
-                Log.d(TAG, "📦 Face bounds: ${face.boundingBox}")
+                Log.d(TAG, "Face bounds: ${face.boundingBox}")
                 extractFace(bitmap, face)
             }
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erreur lors de la détection: ${e.message}", e)
+            Log.e(TAG, "Erreur lors de la détection: ${e.message}", e)
             emptyList()
         }
     }
@@ -107,7 +107,7 @@ class FaceDetector(private val context: Context) {
             )
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erreur lors de l'extraction du visage: ${e.message}", e)
+            Log.e(TAG, "Erreur lors de l'extraction du visage: ${e.message}", e)
             null
         }
     }

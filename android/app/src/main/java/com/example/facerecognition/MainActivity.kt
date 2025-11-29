@@ -66,50 +66,69 @@ class MainActivity : AppCompatActivity() {
         
         cameraExecutor = Executors.newSingleThreadExecutor()
         
-        // Initialiser les modèles ML
-        Log.d(TAG, "Appel de initializeModels()...")
-        initializeModels()
-        Log.d(TAG, "initializeModels() terminé")
-        
         setupAppBar()
         setupUI()
         checkPermissions()
+        
+        // Initialiser les modèles ML en arrière-plan
+        Log.d(TAG, "Lancement initialisation modèles en arrière-plan...")
+        initializeModelsAsync()
+        
         Log.d(TAG, "onCreate terminé")
     }
     
-    private fun initializeModels() {
-        try {
-            Log.d(TAG, "Initialisation des modèles ML...")
-            faceRecognitionModel = FaceRecognitionModel(this)
-            Log.d(TAG, "FaceRecognitionModel créé")
-            faceDetector = FaceDetector(this)
-            Log.d(TAG, "FaceDetector créé")
-            modelsInitialized = true
-            
-            // Activer le bouton de capture
-            binding.btnCapture.post {
+    private fun initializeModelsAsync() {
+        // Désactiver le bouton capture pendant le chargement
+        binding.btnCapture.isEnabled = false
+        binding.btnCapture.alpha = 0.5f
+        binding.loadingText.text = "Chargement des modèles..."
+        binding.loadingText.visibility = View.VISIBLE
+        
+        lifecycleScope.launch {
+            try {
+                Log.d(TAG, "Initialisation des modèles ML en arrière-plan...")
+                
+                // Charger les modèles dans un thread IO
+                withContext(Dispatchers.IO) {
+                    try {
+                        Log.d(TAG, "Création FaceRecognitionModel...")
+                        faceRecognitionModel = FaceRecognitionModel(this@MainActivity)
+                        Log.d(TAG, "✓ FaceRecognitionModel créé")
+                        
+                        Log.d(TAG, "Création FaceDetector...")
+                        faceDetector = FaceDetector(this@MainActivity)
+                        Log.d(TAG, "✓ FaceDetector créé")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Erreur création modèles", e)
+                        throw e
+                    }
+                }
+                
+                // Succès - activer l'interface
+                modelsInitialized = true
                 binding.btnCapture.isEnabled = true
-                binding.btnCapture.isClickable = true
                 binding.btnCapture.alpha = 1.0f
-                Log.d(TAG, "Bouton capture activé: enabled=${binding.btnCapture.isEnabled}, clickable=${binding.btnCapture.isClickable}")
+                binding.loadingText.visibility = View.GONE
+                
+                showMessage("Modèles chargés avec succès")
+                Log.d(TAG, "✓ Modèles ML initialisés avec succès")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Erreur initialisation modèles: ${e.message}", e)
+                e.printStackTrace()
+                
+                // Échec - nettoyer et informer
+                modelsInitialized = false
+                faceRecognitionModel = null
+                faceDetector = null
+                
+                binding.btnCapture.isEnabled = false
+                binding.btnCapture.alpha = 0.3f
+                binding.loadingText.text = "Erreur chargement modèles"
+                binding.loadingText.visibility = View.VISIBLE
+                
+                showMessage("Erreur: ${e.message ?: "Chargement modèles échoué"}")
             }
-            
-                showMessage("Modèles chargés")
-                Log.d(TAG, "Modèles ML initialisés avec succès")
-        } catch (e: Exception) {
-                Log.e(TAG, "Erreur lors de l'initialisation des modèles: ${e.message}", e)
-            e.printStackTrace()
-            modelsInitialized = false
-            faceRecognitionModel = null
-            faceDetector = null
-            
-            binding.btnCapture.post {
-                binding.btnCapture.isEnabled = true  // Activé quand même pour tester
-                binding.btnCapture.isClickable = true
-                binding.btnCapture.alpha = 0.5f
-            }
-            
-            showMessage("Erreur: ${e.message}")
         }
     }
 

@@ -4,8 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.gpu.CompatibilityList
-import org.tensorflow.lite.gpu.GpuDelegate
+// GPU delegate import retiré pour compatibilité
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -19,7 +18,7 @@ import java.nio.channels.FileChannel
 class EmbeddingExtractor(private val context: Context) {
 
     private var interpreter: Interpreter? = null
-    private var gpuDelegate: GpuDelegate? = null
+    // Supprimé: délégation GPU pour éviter conflits de dépendances
     
     companion object {
         private const val TAG = "EmbeddingExtractor"
@@ -42,23 +41,24 @@ class EmbeddingExtractor(private val context: Context) {
         return try {
             Log.d(TAG, "Chargement de $MODEL_FILE...")
             
+            // Vérifier que le fichier existe
+            val assetList = context.assets.list("")
+            Log.d(TAG, "Assets disponibles: ${assetList?.joinToString() ?: "aucun"}")
+            
+            if (assetList?.contains(MODEL_FILE) != true) {
+                Log.e(TAG, "Fichier $MODEL_FILE introuvable dans assets")
+                return false
+            }
+            
             // Charger le modèle
             val model = loadModelFile()
+            Log.d(TAG, "Fichier modèle chargé: ${model.capacity()} bytes")
             
             // Configurer les options TFLite
             val options = Interpreter.Options().apply {
-                numThreads = 4
-                
-                // Essayer d'utiliser le GPU si disponible
-                val compatList = CompatibilityList()
-                if (compatList.isDelegateSupportedOnThisDevice) {
-                    Log.d(TAG, "GPU supporté, activation de la délégation GPU")
-                    gpuDelegate = GpuDelegate(compatList.bestOptionsForThisDevice)
-                    addDelegate(gpuDelegate)
-                } else {
-                    Log.d(TAG, "GPU non supporté, utilisation du CPU")
-                    useNNAPI = true
-                }
+                // Utiliser plusieurs threads CPU et NNAPI pour accélération
+                setNumThreads(4)
+                setUseNNAPI(true)
             }
             
             // Créer l'interpréteur
@@ -68,13 +68,14 @@ class EmbeddingExtractor(private val context: Context) {
             val inputShape = interpreter!!.getInputTensor(0).shape()
             val outputShape = interpreter!!.getOutputTensor(0).shape()
             
-            Log.d(TAG, "Modèle chargé avec succès")
+            Log.d(TAG, "✓ Modèle chargé avec succès")
             Log.d(TAG, "  Input shape: ${inputShape.contentToString()}")
             Log.d(TAG, "  Output shape: ${outputShape.contentToString()}")
             
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Erreur lors du chargement du modèle", e)
+            Log.e(TAG, "Erreur lors du chargement du modèle: ${e.message}", e)
+            e.printStackTrace()
             false
         }
     }
@@ -197,8 +198,7 @@ class EmbeddingExtractor(private val context: Context) {
         interpreter?.close()
         interpreter = null
         
-        gpuDelegate?.close()
-        gpuDelegate = null
+        // Pas de délégation GPU
         
         Log.d(TAG, "Ressources libérées")
     }
