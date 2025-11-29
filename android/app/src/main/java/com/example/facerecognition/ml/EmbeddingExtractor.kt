@@ -100,20 +100,30 @@ class EmbeddingExtractor(private val context: Context) {
             )
 
             val results = ortSession!!.run(mapOf(inputName to inputTensor))
-            val outputTensor = results.values.first().value as OnnxTensor
-            val rawEmbedding = outputTensor.floatBuffer.array()
+            // Récupération du premier tenseur de sortie
+            val outputOnnxValue = results.get(0)
+            val outputTensor = outputOnnxValue as OnnxTensor
+            val floatBuf = outputTensor.floatBuffer
+            floatBuf.rewind()
+            val rawEmbedding = FloatArray(floatBuf.remaining())
+            floatBuf.get(rawEmbedding)
 
-            // Copie sûre (array peut être plus grand que EMBEDDING_SIZE)
-            val embedding = if (rawEmbedding.size == EMBEDDING_SIZE) rawEmbedding
-            else rawEmbedding.copyOf(EMBEDDING_SIZE)
+            // Ajuster à EMBEDDING_SIZE si nécessaire
+            val embedding = if (rawEmbedding.size >= EMBEDDING_SIZE) rawEmbedding.copyOf(EMBEDDING_SIZE)
+            else {
+                // Remplissage zéro si taille inattendue
+                FloatArray(EMBEDDING_SIZE).also { arr ->
+                    System.arraycopy(rawEmbedding, 0, arr, 0, rawEmbedding.size)
+                }
+            }
 
             normalizeL2(embedding)
             Log.d(TAG, "Embedding ONNX extrait: ${embedding.size}D norm=${calculateNorm(embedding)}")
 
             // Libérer ressources temporaires
             inputTensor.close()
-            results.close()
             outputTensor.close()
+            results.close()
 
             embedding
         } catch (e: Exception) {
