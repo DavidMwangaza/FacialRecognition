@@ -139,7 +139,7 @@ class FaceRecognitionModel(private val context: Context) {
             Log.e(TAG, "Erreur lors du chargement des métadonnées: ${e.message}", e)
             e.printStackTrace()
             // Labels par défaut si échec
-            labels = List(outputShape[1]) { "Personne $it" }
+            labels = List(outputShape[1].toInt()) { "Personne $it" }
         }
     }
     
@@ -180,7 +180,7 @@ class FaceRecognitionModel(private val context: Context) {
             val inputTensor = OnnxTensor.createTensor(
                 ortEnv!!,
                 FloatBuffer.wrap(embedding),
-                longArrayOf(1, EMBEDDING_SIZE.toLong())
+                longArrayOf(1L, EMBEDDING_SIZE.toLong())
             )
             
             // Exécuter l'inférence
@@ -244,4 +244,8 @@ class FaceRecognitionModel(private val context: Context) {
         
         Log.d(TAG, "✓ Modèle ONNX et extracteur fermés")
     }
+}
+
+class OrtEnvironment {
+
 }
