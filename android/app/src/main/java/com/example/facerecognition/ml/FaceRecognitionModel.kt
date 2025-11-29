@@ -20,6 +20,7 @@ import kotlin.math.sqrt
 class FaceRecognitionModel(private val context: Context) {
     
     private var interpreter: Interpreter? = null
+    private var embeddingExtractor: EmbeddingExtractor? = null
     private var labels: List<String> = emptyList()
     private var inputShape: IntArray = intArrayOf(1, 512)
     private var outputShape: IntArray = intArrayOf(1, 2)
@@ -48,6 +49,15 @@ class FaceRecognitionModel(private val context: Context) {
     init {
         loadModel()
         loadMetadata()
+        
+        // Initialiser l'extracteur d'embeddings réel
+        embeddingExtractor = EmbeddingExtractor(context)
+        if (!embeddingExtractor!!.initialize()) {
+            Log.e(TAG, "⚠️ Échec initialisation EmbeddingExtractor, utilisation de la version simplifiée")
+            embeddingExtractor = null
+        } else {
+            Log.d(TAG, "✓ EmbeddingExtractor (MobileFaceNet) initialisé avec succès")
+        }
     }
     
     /**
@@ -123,61 +133,18 @@ class FaceRecognitionModel(private val context: Context) {
     }
     
     /**
-     * Extrait un embedding depuis une image de visage
-     * Pour l'instant, génère un embedding factice basé sur les pixels
-     * TODO: Utiliser un vrai modèle d'extraction d'embeddings (FaceNet, ArcFace, etc.)
+     * Extrait un embedding 512D depuis une image de visage via MobileFaceNet.
+     * Retourne null si l'extracteur n'est pas disponible ou en cas d'erreur.
      */
-    private fun extractEmbedding(bitmap: Bitmap): FloatArray {
-        // Redimensionner à 112x112 (taille standard pour FaceNet)
-        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 112, 112, true)
-        
-        // Extraire les caractéristiques moyennes des pixels
-        val pixels = IntArray(112 * 112)
-        resizedBitmap.getPixels(pixels, 0, 112, 0, 0, 112, 112)
-        
-        // Créer un embedding simple basé sur les statistiques de l'image
-        val embedding = FloatArray(EMBEDDING_SIZE)
-        
-        // Calculer des caractéristiques de base
-        val blockSize = 8
-        val numBlocks = 112 / blockSize
-        
-        for (i in 0 until numBlocks) {
-            for (j in 0 until numBlocks) {
-                val blockIndex = i * numBlocks + j
-                if (blockIndex < EMBEDDING_SIZE) {
-                    var sum = 0f
-                    for (y in 0 until blockSize) {
-                        for (x in 0 until blockSize) {
-                            val pixelIndex = (i * blockSize + y) * 112 + (j * blockSize + x)
-                            if (pixelIndex < pixels.size) {
-                                val pixel = pixels[pixelIndex]
-                                val r = ((pixel shr 16) and 0xFF) / 255.0f
-                                val g = ((pixel shr 8) and 0xFF) / 255.0f
-                                val b = (pixel and 0xFF) / 255.0f
-                                sum += (r + g + b) / 3.0f
-                            }
-                        }
-                    }
-                    embedding[blockIndex] = sum / (blockSize * blockSize)
-                }
-            }
+    private fun extractEmbedding(bitmap: Bitmap): FloatArray? {
+        val extractedEmbedding = embeddingExtractor?.extract(bitmap)
+        return if (extractedEmbedding != null) {
+            Log.d(TAG, "✓ Embedding extrait par MobileFaceNet")
+            extractedEmbedding
+        } else {
+            Log.e(TAG, "❌ EmbeddingExtractor indisponible ou modèle non chargé")
+            null
         }
-        
-        // Normalisation L2
-        var norm = 0f
-        for (value in embedding) {
-            norm += value * value
-        }
-        norm = kotlin.math.sqrt(norm)
-        
-        if (norm > 0) {
-            for (i in embedding.indices) {
-                embedding[i] /= norm
-            }
-        }
-        
-        return embedding
     }
     
     /**
@@ -192,6 +159,10 @@ class FaceRecognitionModel(private val context: Context) {
         try {
             // Extraire l'embedding de l'image
             val embedding = extractEmbedding(faceBitmap)
+            if (embedding == null) {
+                Log.e(TAG, "Reconnaissance impossible: embedding non disponible")
+                return null
+            }
             
             // Créer le buffer d'entrée
             val inputBuffer = ByteBuffer.allocateDirect(BATCH_SIZE * EMBEDDING_SIZE * 4)
@@ -253,6 +224,10 @@ class FaceRecognitionModel(private val context: Context) {
     fun close() {
         interpreter?.close()
         interpreter = null
-        Log.d(TAG, "✓ Modèle fermé")
+        
+        embeddingExtractor?.close()
+        embeddingExtractor = null
+        
+        Log.d(TAG, "✓ Modèle et extracteur fermés")
     }
 }
