@@ -30,7 +30,7 @@ android/
 └── gradle.properties                   # Propriétés Gradle
 ```
 
-## 🚀 Ouverture dans Android Studio
+## Ouverture dans Android Studio
 
 ### 1. Ouvrir le projet
 1. Lancez **Android Studio**
@@ -105,25 +105,25 @@ private const val BASE_URL = "http://10.131.82.86:5000/"
 - **Material Design**: Interface moderne
 - **Coroutines**: Programmation asynchrone
 
-## 🎯 Fonctionnalités
+## Fonctionnalités
 
 ### Caméra
-- ✅ Aperçu en temps réel
-- ✅ Capture photo
-- ✅ Basculement caméra avant/arrière
-- ✅ Gestion automatique des permissions
+- Aperçu en temps réel
+- Capture photo
+- Basculement caméra avant/arrière
+- Gestion automatique des permissions
 
 ### Reconnaissance
-- ✅ Envoi image vers API Flask
-- ✅ Détection de multiples visages
-- ✅ Affichage des noms et confiance
-- ✅ Indicateur de chargement
+- Envoi image vers API Flask
+- Détection de multiples visages
+- Affichage des noms et confiance
+- Indicateur de chargement
 
 ### Interface
-- ✅ Design moderne Material Design
-- ✅ Mode sombre
-- ✅ Animations fluides
-- ✅ Messages d'erreur clairs
+- Design moderne Material Design
+- Mode sombre
+- Animations fluides
+- Messages d'erreur clairs
 
 ## 📋 Permissions Nécessaires
 
@@ -146,7 +146,7 @@ Assurez-vous que :
 
 ### Vérifier la connexion
 L'application teste automatiquement la connexion au démarrage.
-Si vous voyez "✓ Serveur connecté", tout est OK !
+Si vous voyez "Serveur connecté", tout est OK !
 
 ## 🐛 Dépannage
 
@@ -181,7 +181,7 @@ View → Tool Windows → Logcat
 
 Filtrez par "FaceRecognition" pour voir les logs de l'application.
 
-## 🚀 Build de Production
+## Build de Production
 
 ### Générer un APK
 ```bash

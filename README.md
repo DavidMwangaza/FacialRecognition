@@ -2,14 +2,14 @@
 
 Application mobile Android native utilisant l'apprentissage automatique pour la reconnaissance faciale en temps réel.
 
-## 🎯 Fonctionnalités
+## Fonctionnalités
 
-- ✅ Reconnaissance faciale en temps réel via la caméra
-- ✅ Détection de visages avec ML Kit de Google
-- ✅ Classification avec modèle TensorFlow Lite personnalisé
-- ✅ Interface utilisateur intuitive
-- ✅ Support caméra avant/arrière
-- ✅ Fonctionnement 100% hors ligne
+- Reconnaissance faciale en temps réel via la caméra
+- Détection de visages avec ML Kit de Google
+- Classification avec modèle TensorFlow Lite personnalisé
+- Interface utilisateur intuitive
+- Support caméra avant/arrière
+- Fonctionnement 100% hors ligne
 
 ## 🛠️ Technologies utilisées
 
@@ -30,7 +30,7 @@ Application mobile Android native utilisant l'apprentissage automatique pour la 
 - **Format** : YUV_420_888
 - **Résolution** : Adaptative
 
-## 📦 Installation
+## Installation
 
 ### Prérequis
 - Android Studio Hedgehog | 2023.1.1 ou supérieur

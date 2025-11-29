@@ -18,7 +18,7 @@ def download_mobilefacenet():
     
     # Alternative: utiliser un modèle ONNX converti ou construire un simple extracteur
     # Pour l'instant, on crée un modèle TFLite basique qui simule MobileFaceNet
-    print("⚠️  Utilisation d'un modèle d'extraction simplifié")
+    print("Attention: utilisation d'un modèle d'extraction simplifié")
     print("    Pour de meilleurs résultats, utilisez un vrai MobileFaceNet pré-entraîné")
     
     return create_simple_facenet()
@@ -76,14 +76,14 @@ def create_simple_facenet():
     ])
     
     model.compile(optimizer='adam', loss='mse')
-    print("✓ Modèle créé")
+    print("Modèle créé")
     model.summary()
     
     return model
 
 def convert_to_tflite(model):
     """Convertit le modèle Keras en TensorFlow Lite"""
-    print("\n🔄 Conversion en TFLite...")
+    print("\nConversion en TFLite...")
     
     os.makedirs(ASSETS_DIR, exist_ok=True)
     
@@ -100,14 +100,14 @@ def convert_to_tflite(model):
     with open(TFLITE_PATH, 'wb') as f:
         f.write(tflite_model)
     
-    print(f"✓ Modèle TFLite sauvegardé: {TFLITE_PATH}")
+    print(f"Modèle TFLite sauvegardé: {TFLITE_PATH}")
     print(f"   Taille: {len(tflite_model) / 1024:.2f} KB")
     
     return TFLITE_PATH
 
 def test_model(model_path):
     """Teste le modèle avec une image factice"""
-    print("\n🧪 Test du modèle...")
+    print("\nTest du modèle...")
     
     interpreter = tf.lite.Interpreter(model_path=model_path)
     interpreter.allocate_tensors()
@@ -115,8 +115,8 @@ def test_model(model_path):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     
-    print(f"✓ Input shape: {input_details[0]['shape']}")
-    print(f"✓ Output shape: {output_details[0]['shape']}")
+    print(f"Input shape: {input_details[0]['shape']}")
+    print(f"Output shape: {output_details[0]['shape']}")
     
     # Test avec une image random
     test_input = np.random.rand(1, 112, 112, 3).astype(np.float32)
@@ -124,13 +124,13 @@ def test_model(model_path):
     interpreter.invoke()
     
     output = interpreter.get_tensor(output_details[0]['index'])
-    print(f"✓ Embedding généré: shape={output.shape}, norm={np.linalg.norm(output):.4f}")
+    print(f"Embedding généré: shape={output.shape}, norm={np.linalg.norm(output):.4f}")
     
     return True
 
 def main():
     print("="*70)
-    print("🤖 PRÉPARATION DE MOBILEFACENET POUR ANDROID")
+    print("PREPARATION DE MOBILEFACENET POUR ANDROID")
     print("="*70)
     
     try:
@@ -144,22 +144,22 @@ def main():
         test_model(tflite_path)
         
         print("\n" + "="*70)
-        print("✅ MOBILEFACENET PRÊT !")
+        print("MOBILEFACENET PRET !")
         print("="*70)
-        print(f"📦 Fichier: {tflite_path}")
-        print("\n⚠️  IMPORTANT:")
+        print(f"Fichier: {tflite_path}")
+        print("\nIMPORTANT:")
         print("   Ce modèle est simplifié pour démonstration.")
         print("   Pour la production, téléchargez un vrai MobileFaceNet pré-entraîné:")
         print("   - https://github.com/sirius-ai/MobileFaceNet_TF")
         print("   - https://github.com/deepinsight/insightface")
-        print("\n🎯 Prochaines étapes:")
+        print("\nProchaines étapes:")
         print("   1. Créer EmbeddingExtractor.kt dans l'app Android")
         print("   2. Remplacer extractEmbedding() factice")
         print("   3. Tester avec de vraies photos")
         print("="*70)
         
     except Exception as e:
-        print(f"\n❌ Erreur: {e}")
+        print(f"\nErreur: {e}")
         import traceback
         traceback.print_exc()
 

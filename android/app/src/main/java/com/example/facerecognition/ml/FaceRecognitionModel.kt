@@ -53,10 +53,10 @@ class FaceRecognitionModel(private val context: Context) {
         // Initialiser l'extracteur d'embeddings réel
         embeddingExtractor = EmbeddingExtractor(context)
         if (!embeddingExtractor!!.initialize()) {
-            Log.e(TAG, "⚠️ Échec initialisation EmbeddingExtractor, utilisation de la version simplifiée")
+            Log.e(TAG, "Echec initialisation EmbeddingExtractor, extracteur indisponible")
             embeddingExtractor = null
         } else {
-            Log.d(TAG, "✓ EmbeddingExtractor (MobileFaceNet) initialisé avec succès")
+            Log.d(TAG, "EmbeddingExtractor (MobileFaceNet) initialisé avec succès")
         }
     }
     
@@ -65,11 +65,11 @@ class FaceRecognitionModel(private val context: Context) {
      */
     private fun loadModel() {
         try {
-            Log.d(TAG, "📦 Chargement du modèle: $MODEL_FILE")
+            Log.d(TAG, "Chargement du modèle: $MODEL_FILE")
             
             // Vérifier que le fichier existe
             val assetFiles = context.assets.list("") ?: emptyArray()
-            Log.d(TAG, "📂 Fichiers assets disponibles: ${assetFiles.joinToString()}")
+            Log.d(TAG, "Fichiers assets disponibles: ${assetFiles.joinToString()}")
             
             val options = Interpreter.Options().apply {
                 setNumThreads(4)
@@ -77,7 +77,7 @@ class FaceRecognitionModel(private val context: Context) {
             }
             
             val modelBuffer = FileUtil.loadMappedFile(context, MODEL_FILE)
-            Log.d(TAG, "✓ Buffer modèle chargé: ${modelBuffer.capacity()} bytes")
+            Log.d(TAG, "Buffer modèle chargé: ${modelBuffer.capacity()} bytes")
             
             interpreter = Interpreter(modelBuffer, options)
             Log.d(TAG, "✓ Interpreter créé")
@@ -125,7 +125,7 @@ class FaceRecognitionModel(private val context: Context) {
             Log.d(TAG, "  Labels: $labels")
             
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Erreur lors du chargement des métadonnées: ${e.message}", e)
+            Log.e(TAG, "Erreur lors du chargement des métadonnées: ${e.message}", e)
             e.printStackTrace()
             // Labels par défaut si échec
             labels = List(outputShape[1]) { "Personne $it" }
@@ -142,7 +142,7 @@ class FaceRecognitionModel(private val context: Context) {
             Log.d(TAG, "✓ Embedding extrait par MobileFaceNet")
             extractedEmbedding
         } else {
-            Log.e(TAG, "❌ EmbeddingExtractor indisponible ou modèle non chargé")
+            Log.e(TAG, "EmbeddingExtractor indisponible ou modèle non chargé")
             null
         }
     }

@@ -7,4 +7,6 @@
     <string name="captured_image">Image capturée</string>
     <string name="analyzing">Analyse en cours…</string>
     <string name="results_title">Résultats de Reconnaissance</string>
+    <string name="menu_settings">Paramètres</string>
+    <string name="menu_about">À propos</string>
 </resources>
